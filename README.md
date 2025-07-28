@@ -16,7 +16,6 @@ A Python-based utility for extracting structured heading hierarchies and outline
 - [Project Structure](#project-structure)
 - [Diagram](#diagram)
 - [Output Format](#output-format)
-- [OCR and Multilingual Support](#ocr-and-multilingual-support)
 
 ---
 
@@ -104,5 +103,3 @@ When enabled, paragraph text below each heading is also captured and associated 
   ]
 }
 ```
-## OCR and Multilingual Support
-If the PDF lacks embedded text (e.g., scanned images), the tool falls back to OCR using Tesseract. Multilingual support is enabled by specifying additional languages (e.g., lang='eng+hin+deu+ara'), provided the appropriate Tesseract language packs are installed in the Docker image.
