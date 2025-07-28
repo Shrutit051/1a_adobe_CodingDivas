@@ -1,124 +1,108 @@
 # PDF Heading Extractor
 
-A Python-based tool to extract structured headings and outlines from PDF documents using PyMuPDF. This tool detects headings (H1, H2, H3) by analyzing font sizes, styles, and positions of text spans, optionally extracting the section text below each heading.
+A Python-based utility for extracting structured heading hierarchies and outlines from PDF documents using PyMuPDF. The tool intelligently detects headings (H1, H2, H3) by analyzing font size, weight, and layout features—and optionally extracts the corresponding section text.
+
+---
 
 ## Table of Contents
-- [How to Run (Docker)](#how-to-run-docker)
-    - [1. Build the Docker Image](#1-build-the-docker-image)
-    - [2. Prepare Input Files](#2-prepare-input-files)
-    - [3. Run the Container](#3-run-the-container)
-    - [4. Find Your Output](#4-find-your-output)
+
+- [Getting Started (Docker)](#getting-started-docker)
+  - [1. Build the Docker Image](#1-build-the-docker-image)
+  - [2. Prepare Input Files](#2-prepare-input-files)
+  - [3. Run the Container](#3-run-the-container)
+  - [4. Locate Output Files](#4-locate-output-files)
 - [Overview](#overview)
 - [How It Works](#how-it-works)
 - [Project Structure](#project-structure)
 - [Diagram](#diagram)
 - [Output Format](#output-format)
+- [OCR and Multilingual Support](#ocr-and-multilingual-support)
 
-## How to Run (Docker)
+---
+
+## Getting Started (Docker)
 
 ### 1. Build the Docker Image
 
-Open a terminal in your project directory and run:
+Navigate to your project directory and run the following command to build the Docker image:
 
 ```bash
 docker build -t pdf-heading-extractor .
 ```
 
-### 2. Prepare Input Files
+## 2. Prepare Input Files
+Place your PDF documents into a local folder, for example: ./input.
 
-- Place your PDF files in a local folder, e.g., `/input`.
+## 3. Run the Container
+Execute the container with appropriate volume mounts for input and output:
 
-### 3. Run the Container
-
-Mount your local input and output folders to the Docker container:
-
-```bash
+```
 docker run --rm -v /input:/app/input -v /output:/app/output pdf-heading-extractor
 ```
+All .pdf files in the /input directory will be processed.
+Corresponding .json outline files will be saved to the /output directory.
 
-- All PDF files in `/input` will be processed.
-- Extracted outlines (as `.json` files) will be saved to `/output`.
+Note:
+Inside the container, /app/input and /app/output are the working directories.
+Make sure your local /input folder contains valid PDFs before running the container.
 
-**Note:**  
-- The `/app/input` and `/app/output` folders are used inside the Docker container.
-- Ensure your input PDF files are in the mounted `/input` directory before running.
-
-### 4. Find Your Output
-
-- Look for the generated `.json` files in your specified `/output` directory after processing completes.
+## 4. Locate Output Files
+Once processing completes, check your specified /output directory for generated .json files.
 
 ## Overview
-
-Many PDF documents lack semantic headings or outline information. **PDF Heading Extractor** reconstructs a document’s hierarchy by analyzing font properties, boldness, indentation, and alignment. The tool classifies headings as H1, H2, or H3, and can group section body text under each heading.
+Many PDFs lack semantic metadata or consistent formatting for heading detection. This tool reconstructs logical document structure by analyzing text spans based on font size, boldness, indentation, and vertical spacing.
+It categorizes headings into hierarchical levels (H1, H2, H3) and can optionally associate body text under each heading, making it suitable for tasks such as summarization, indexing, or semantic search.
 
 ## How It Works
+Text Span Extraction
+Each page is parsed using PyMuPDF, extracting spans with metadata such as font size, position, and boldness.
 
-1. **Parsing PDF Text Spans:**  
-   Each PDF page is processed with PyMuPDF. Text spans (chunks of uniformly formatted text) are collected, recording font family, size, style, coordinates, and boldness.
+Noise Filtering
+Non-informative content—like repeated header lines, decorative symbols, or overly short text—is ignored.
 
-2. **Filtering Decorative Text:**  
-   Decorative elements (e.g., letter lines, long dashes, or too-short fragments) are ignored to focus only on meaningful text.
+Font Weight Adjustment
+Bolded spans are given a slight boost in effective font size to better distinguish headings.
 
-3. **Adjusting for Boldness:**  
-   Font sizes are increased slightly for bolded text spans to help distinguish headings from body text.
+Dynamic Layout Thresholds
+The script calculates median indentation and vertical spacing to tune heading detection thresholds per document.
 
-4. **Dynamic Thresholds:**  
-   Indentation and vertical gaps between text blocks are assessed using median values to tune heading and section groupings.
+Heading Level Mapping
+The top three largest unique font sizes are mapped to H1, H2, and H3 levels respectively.
 
-5. **Mapping Font Sizes:**  
-   The top three largest unique font sizes (after adjustment) are mapped to heading levels H1, H2, and H3.
+Outline Construction
+Text spans with similar styles and proximity are grouped and merged to form complete headings. A hierarchical outline is then constructed.
 
-6. **Outline Construction:**  
-   Consecutive spans with the same style, size, and nearby positions are merged into a single heading. The outline is then organized hierarchically.
-
-7. **Section Text Extraction (Optional):**  
-   If enabled, the body text under each heading is extracted and attached to the output.
+(Optional) Section Text Extraction
+When enabled, paragraph text below each heading is also captured and associated with that heading in the output.
 
 ## Project Structure
-
 ```
 /app
 │
-├── extract_headings.py        # Heading extraction logic
-├── process_pdfs.py            # Batch processor for input PDFs
-├── requirements.txt           # Python dependency list
-├── Dockerfile                 # Container configuration
-├── input/                     # Place your input PDF files here
-└── output/                    # Output JSON files are written here
+├── extract_headings.py        # Core logic for heading extraction
+├── process_pdfs.py            # Batch processor for all input PDFs
+├── requirements.txt           # Python package requirements
+├── Dockerfile                 # Docker image configuration
+├── input/                     # Directory for input PDF files
+└── output/                    # Directory for output JSON results
 ```
 
-## Diagram
-
-![PDF Extraction Flowchart](img.png)
-
-
-## Output Format
-
-Each processed PDF generates a JSON file in the output directory with:
-
-- `title`: The document’s main title (gathered from top page headings)
-- `outline`: List of detected headings. Each heading contains:
-    - `level`: H1, H2, or H3
-    - `text`: The heading text
-    - `page`: PDF page number where the heading appears
-    - (optionally) `text_content`: Section body text under this heading (if enabled in code)
-
-**Example:**
-
-```json
+```
 {
-    "title": "Sample Document Title",
-    "outline": [
-        {
-            "level": "H1",
-            "text": "Introduction",
-            "page": 1
-        },
-        {
-            "level": "H2",
-            "text": "Background",
-            "page": 2
-        }
-    ]
+  "title": "Sample Document Title",
+  "outline": [
+    {
+      "level": "H1",
+      "text": "Introduction",
+      "page": 1
+    },
+    {
+      "level": "H2",
+      "text": "Background",
+      "page": 2
+    }
+  ]
 }
 ```
+## OCR and Multilingual Support
+If the PDF lacks embedded text (e.g., scanned images), the tool falls back to OCR using Tesseract. Multilingual support is enabled by specifying additional languages (e.g., lang='eng+hin+deu+ara'), provided the appropriate Tesseract language packs are installed in the Docker image.
